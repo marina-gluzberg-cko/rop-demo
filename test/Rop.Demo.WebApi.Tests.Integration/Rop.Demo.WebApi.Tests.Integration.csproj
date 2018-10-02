@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoFixture" Version="4.5.0" />
+    <PackageReference Include="Microsoft.AspNetCore" Version="2.1.4" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="2.1.1" />
+    <PackageReference Include="Moq" Version="4.10.0" />
+    <PackageReference Include="NSpec" Version="3.1.0" />
+    <PackageReference Include="Oakton" Version="1.5.0" />
+    <PackageReference Include="SemanticComparison" Version="4.0.0" />
+    <PackageReference Include="Shouldly" Version="3.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Rop.Demo.Domain\Rop.Demo.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Rop.Demo\Rop.Demo.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.Extensions.Configuration">
+      <HintPath>..\..\..\..\..\Program Files\dotnet\sdk\NuGetFallbackFolder\microsoft.extensions.configuration\2.1.1\lib\netstandard2.0\Microsoft.Extensions.Configuration.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

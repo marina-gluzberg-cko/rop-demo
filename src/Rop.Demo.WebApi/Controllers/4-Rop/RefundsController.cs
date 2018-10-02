@@ -106,20 +106,20 @@ namespace Rop.Demo.WebApi.Controllers.Rop
         {
             int amount = default(int);
 
+            int refundedAmount = _refundsRepository.GetRefundedAmountForPayment(payment.Reference);
+
             if (request.Amount.HasValue)
             {
                 amount = request.Amount.Value;
-            }
-            else
-            {
-                int refundedAmount = _refundsRepository.GetRefundedAmountForPayment(payment.Reference);
 
-                amount = payment.Amount - refundedAmount;
-
-                if (amount < 0)
+                if (amount > (payment.Amount - refundedAmount))
                 {
                     return Result<Refund, IActionResult>.Failed(StatusCode(StatusCodes.Status403Forbidden));
                 }
+            }
+            else
+            {
+                amount = payment.Amount - refundedAmount;
             }
 
             Refund refund = new Refund() { Reference = refundReference, Amount = amount };

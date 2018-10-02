@@ -70,22 +70,20 @@ namespace Rop.Demo.WebApi.Controllers.Initial
 
             int amount = default(int);
 
-            int refundedAmount = default(int);
+            int refundedAmount = _refundsRepository.GetRefundedAmountForPayment(payment.Reference);
 
             if (request.Amount.HasValue)
             {
                 amount = request.Amount.Value;
-            }
-            else
-            {
-                refundedAmount = _refundsRepository.GetRefundedAmountForPayment(payment.Reference);
 
-                amount = payment.Amount - refundedAmount;
-
-                if (amount < 0)
+                if (amount > (payment.Amount - refundedAmount))
                 {
                     return StatusCode(StatusCodes.Status403Forbidden);
                 }
+            }
+            else
+            {
+                amount = payment.Amount - refundedAmount;
             }
 
             Refund refund = new Refund() { Reference = refundReference, Amount = amount };
@@ -94,7 +92,7 @@ namespace Rop.Demo.WebApi.Controllers.Initial
             {
                 _logger.LogWarning("Refund with reference: {Reference} already exists.", refund.Reference);
 
-                return StatusCode(StatusCodes.Status422UnprocessableEntity);
+                return StatusCode(StatusCodes.Status400BadRequest);
             }
 
             long merchantId = payment.MerchantId;
@@ -110,7 +108,7 @@ namespace Rop.Demo.WebApi.Controllers.Initial
 
             if (!payment.Created)
             {
-                return StatusCode(StatusCodes.Status404NotFound);
+                return StatusCode(StatusCodes.Status403Forbidden);
             }
 
             HttpStatusCode createRefundStatus = _refundApiClient.CreateRefund(

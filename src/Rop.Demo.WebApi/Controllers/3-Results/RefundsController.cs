@@ -13,7 +13,7 @@ using System.Net;
 
 namespace Rop.Demo.WebApi.Controllers.ServiceResult
 {
-    [Route("result/payments")]
+    [Route("results/payments")]
     public class RefundsController : Controller
     {
         private readonly ILogger _logger;
@@ -69,11 +69,21 @@ namespace Rop.Demo.WebApi.Controllers.ServiceResult
             Payment payment = retrievePaymentResult.Result.ValueOrFailure();
 
 
-            ServiceResult<Payment, IActionResult> validatePaymentResult = ValidatePayment(payment);
+            ServiceResult<Refund, IActionResult> getRefundWithAmountResult = GetRefundWithAmount(refundReference, payment, request);
 
-            if (validatePaymentResult.HasError)
+            if (getRefundWithAmountResult.HasError)
             {
-                return validatePaymentResult.Error.ValueOrFailure();
+                return getRefundWithAmountResult.Error.ValueOrFailure();
+            }
+
+            Refund refund = getRefundWithAmountResult.Result.ValueOrFailure();
+
+
+            ServiceResult<Refund, IActionResult> storeRequestedRefundResult = StoreRequestedRefund(refund);
+
+            if (storeRequestedRefundResult.HasError)
+            {
+                return storeRequestedRefundResult.Error.ValueOrFailure();
             }
 
 
@@ -87,14 +97,12 @@ namespace Rop.Demo.WebApi.Controllers.ServiceResult
             Merchant merchant = retrieveMerchantResult.Result.ValueOrFailure();
 
 
-            ServiceResult<Refund, IActionResult> getRefundWithAmountResult = GetRefundWithAmount(refundReference, payment, request);
+            ServiceResult<Payment, IActionResult> validatePaymentResult = ValidatePayment(payment);
 
-            if (getRefundWithAmountResult.HasError)
+            if (validatePaymentResult.HasError)
             {
-                return getRefundWithAmountResult.Error.ValueOrFailure();
+                return validatePaymentResult.Error.ValueOrFailure();
             }
-
-            Refund refund = getRefundWithAmountResult.Result.ValueOrFailure();
 
 
             ServiceResult<HttpStatusCode, IActionResult> createRefundResult = CreateRefund(merchant, payment, refund);
@@ -173,20 +181,20 @@ namespace Rop.Demo.WebApi.Controllers.ServiceResult
         {
             int amount = default(int);
 
+            int refundedAmount = _refundsRepository.GetRefundedAmountForPayment(payment.Reference);
+
             if (request.Amount.HasValue)
             {
                 amount = request.Amount.Value;
-            }
-            else
-            {
-                int refundedAmount = _refundsRepository.GetRefundedAmountForPayment(payment.Reference);
 
-                amount = payment.Amount - refundedAmount;
-
-                if (amount < 0)
+                if (amount > (payment.Amount - refundedAmount))
                 {
                     return ServiceResult<Refund, IActionResult>.WithFailureStatus(StatusCode(StatusCodes.Status403Forbidden));
                 }
+            }
+            else
+            {
+                amount = payment.Amount - refundedAmount;
             }
 
             Refund refund = new Refund() { Reference = refundReference, Amount = amount };

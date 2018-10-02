@@ -11,7 +11,7 @@ using System.Net;
 
 namespace Rop.Demo.WebApi.Controllers.Areas
 {
-    [Route("areas/payments")]
+    [Route("regions/payments")]
     public class RefundsController : Controller
     {
         private readonly ILogger _logger;
@@ -64,7 +64,7 @@ namespace Rop.Demo.WebApi.Controllers.Areas
             }
             #endregion
 
-            #region GetRefundWithAmount
+            #region Retrieve Payment
             Payment payment = _paymentsRepository.Read(paymentReference);
 
             if (payment == null)
@@ -77,22 +77,20 @@ namespace Rop.Demo.WebApi.Controllers.Areas
             #region Get Refund With Amount
             int amount = default(int);
 
-            int refundedAmount = default(int);
+            int refundedAmount = _refundsRepository.GetRefundedAmountForPayment(payment.Reference);
 
             if (request.Amount.HasValue)
             {
                 amount = request.Amount.Value;
-            }
-            else
-            {
-                refundedAmount = _refundsRepository.GetRefundedAmountForPayment(payment.Reference);
 
-                amount = payment.Amount - refundedAmount;
-
-                if (amount < 0)
+                if (amount > (payment.Amount - refundedAmount))
                 {
                     return StatusCode(StatusCodes.Status403Forbidden);
                 }
+            }
+            else
+            {
+                amount = payment.Amount - refundedAmount;
             }
 
             Refund refund = new Refund() { Reference = refundReference, Amount = amount };
@@ -103,7 +101,7 @@ namespace Rop.Demo.WebApi.Controllers.Areas
             {
                 _logger.LogWarning("Refund with reference: {Reference} already exists.", refund.Reference);
 
-                return StatusCode(StatusCodes.Status422UnprocessableEntity);
+                return StatusCode(StatusCodes.Status400BadRequest);
             }
             #endregion
 
@@ -123,7 +121,7 @@ namespace Rop.Demo.WebApi.Controllers.Areas
             #region Validate Payment
             if (!payment.Created)
             {
-                return StatusCode(StatusCodes.Status404NotFound);
+                return StatusCode(StatusCodes.Status403Forbidden);
             }
             #endregion
 

@@ -68,15 +68,13 @@ namespace Rop.Demo.WebApi.Controllers.Methods
                 return StatusCode(StatusCodes.Status404NotFound);
             }
 
-            int amount = GetRefundAmount(refundReference, payment, request);
+            Refund refund = GetRefundWithAmount(refundReference, payment, request);
 
-            if (amount < 0) 
+            if (refund == null) 
             {
                 return StatusCode(StatusCodes.Status403Forbidden);
             }
 
-            Refund refund = new Refund() { Reference = refundReference, Amount = amount };            
-            
             if (!(StoreRequestedRefund(refund)))
             {
                 _logger.LogWarning("Refund with reference: {Reference} already exists.", refund.Reference);
@@ -114,7 +112,7 @@ namespace Rop.Demo.WebApi.Controllers.Methods
                 return ProcessResponse(createRefundResult);
             }
 
-            return PrepareSuccessfulResult(amount);
+            return PrepareSuccessfulResult(refund.Amount);
         }
 
         protected Guid GetReference(string id)
@@ -138,22 +136,27 @@ namespace Rop.Demo.WebApi.Controllers.Methods
             return payment.Created;
         }
 
-        private int GetRefundAmount(Guid refundReference, Payment payment, Models.CreateRefundRequest request)
+        private Refund GetRefundWithAmount(Guid refundReference, Payment payment, Models.CreateRefundRequest request)
         {
             int amount = default(int);
+
+            int refundedAmount = _refundsRepository.GetRefundedAmountForPayment(payment.Reference);
 
             if (request.Amount.HasValue)
             {
                 amount = request.Amount.Value;
+
+                if (amount > (payment.Amount - refundedAmount))
+                {
+                    return null;
+                }
             }
             else
             {
-                int refundedAmount = _refundsRepository.GetRefundedAmountForPayment(payment.Reference);
-
                 amount = payment.Amount - refundedAmount;
             }
 
-            return amount;
+            return new Refund() { Reference = refundReference, Amount = amount };
         }
 
         private bool StoreRequestedRefund(Refund refund)
